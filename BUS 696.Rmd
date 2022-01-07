@@ -1,0 +1,156 @@
+---
+title: "BUS 696 ASSIGNMENT"
+author: "R"
+date: "10/3/2021"
+output: html_document
+---
+## QN 1a
+```{r}
+library(readr)
+X433555401_IMDB_movies_3746998591142155 <- read_csv("C:/Users/Admin/Downloads/433555401_IMDB_movies_3746998591142155.csv")
+imdb<-X433555401_IMDB_movies_3746998591142155
+head(imdb)
+```
+
+```{r}
+library(dplyr)
+imdb<-imdb %>% 
+  mutate(grossM=gross/1000000)
+
+
+imdb<-imdb %>% 
+  mutate(budgetM=budget/1000000)
+
+imdb<-imdb %>% 
+  mutate(log_gross=log(gross))
+imdb<-imdb %>% 
+  mutate(log_budget=log(budget))
+names(imdb)
+```
+
+## QN1b
+
+```{r}
+library(forcats)
+imdb$rating_factor <- fct_explicit_na(imdb$content_rating)
+movies_clean<-imdb[,c(29,30,31,32)]
+movies_clean$rating_factor<-imdb$rating_factor
+````
+
+## QN 1c
+```{r}
+movies_clean$rating_simple<-fct_lump_n(movies_clean$rating_factor,n=4)
+```
+
+## QN 1d
+
+```{r}
+x<-table(imdb$content_rating,movies_clean$rating_simple)
+x 
+```
+
+## QN 1e
+
+```{r}
+library(rsample)
+set.seed(1234)         
+movie_split<-initial_split(movies_clean)
+movies_train<-training(movie_split)
+movie_test<-testing(movie_split)
+````
+
+1f
+
+This is important forevaluation of the data mining models, When a data set is divided into a training set and a testing set, the majority of the data is used for training and a smaller amount is utilized for testing. Analysis procedure takes a random sample of the data to guarantee that the training and testing sets are comparable. You can reduce the effects of  i.e KNN data discrepancies and gain a better understanding of the model's properties by using similar data for training and testing.
+
+## QUESTION 2
+
+```{r}
+ mod1<-lm(grossM~imdb_score,data = imdb)
+summary(mod1)
+```
+
+## Qn 2b
+
+An positive increase of one unit of the gross results to a a positive increase of 13.978 units of IMDB score
+
+## Qn 2c
+ The p_value measures if the model carries any statistical significance
+ 
+##Qn 2d
+
+p-value- 2e-16 *** The relationship between imdb and gross can be assessed because its statistically significant
+
+```{r}
+mod2<-lm(log_gross~imdb_score,log_budget,title_year,data =imdb)
+
+```
+
+## Qn 2f
+```{r}
+summary(mod2)
+```
+
+## Question 2h
+
+The column rating_simpeG is a character variable sand cannot be estimated 
+on model.extract
+
+## Question 2i
+An positive increase of one unit of the log_budget_M results to a a positive increase of 0.93179 units of IMDB score
+
+## Question 2j
+
+The coefficient suggest there has been a positive return on the investments
+
+## Question3
+
+```{r}
+preds_train<-predict(mod2,newdata =imdb )
+head(preds_train)
+
+preds_test<-predict(mod1,newdata = imdb)
+head(preds_test)
+```
+
+## 3b and 3c
+
+```{r}
+get_rmse<-function(true_values,predictions){
+  sqrt(mean((exp(true_values)-exp(predictions))^2))
+}
+
+get_mae<-function(true_values,predictions){
+  mean(abs(true_values-predictions))
+
+}
+head(movies_train)
+head(preds_train)
+
+y<-get_rmse(preds_test,preds_train)
+y
+
+w<-get_mae(preds_test,preds_train)
+w
+```
+
+## 3d
+
+```{r}
+results<-data.frame('preds'=c(exp(preds_test),exp(preds_train)),
+                    'true'=c(movie_test$grossM,movies_train$grossM),
+                    'type'=c(rep("Test",nrow(movie_test)),rep("Train",nrow(movies_train))))%>%mutate(preds=preds/1e6,true=true/1e6)
+head(results)
+```
+
+## 3e
+
+```{r}
+library(ggplot2)
+plot<-ggplot(results,aes(y=preds,x=true))+geom_point(alpha=1/20)+
+  xlim(0,300)+ylim(0,300)+geom_abline(aes(intercept = 0,slope= 1),linetype="dashed")+
+  facet_wrap(~type)+theme_minimal()+labs(x="True Movie Gross($M USD",
+                                         y="Predicted Movie Gross($M USD")
+plot
+```
+
